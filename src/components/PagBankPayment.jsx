@@ -12,6 +12,10 @@ export default function PagBankPayment() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [showPixKey, setShowPixKey] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const PIX_KEY = 'orai24698@gmail.com'; // Sua chave PIX
 
   const plans = {
     basic: { name: 'Plano Básico', price: 30, description: 'Acesso básico' },
@@ -36,6 +40,12 @@ export default function PagBankPayment() {
     setError('');
   };
 
+  const copyPixKey = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handlePaymentClick = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -50,7 +60,15 @@ export default function PagBankPayment() {
 
       const selectedPlan = plans[formData.plan];
 
-      // Chamar API para criar a transação no PagBank
+      // Se escolheu PIX, mostrar a chave
+      if (formData.paymentMethod === 'pix') {
+        setStatus(`✅ Chave PIX exibida. Transfira R$ ${selectedPlan.price} para: ${PIX_KEY}`);
+        setShowPixKey(true);
+        setLoading(false);
+        return;
+      }
+
+      // Chamar API para criar a transação no PagBank (para cartão e boleto)
       const response = await fetch('/api/pagbank/checkout', {
         method: 'POST',
         headers: {
@@ -245,6 +263,34 @@ export default function PagBankPayment() {
               </div>
             </div>
 
+            {/* Exibir Chave PIX se selecionado */}
+            {showPixKey && formData.paymentMethod === 'pix' && (
+              <div className="bg-green-500/20 border-2 border-green-500 rounded-3xl p-6">
+                <h4 className="text-green-400 font-bold text-lg mb-4">🟢 Chave PIX</h4>
+                <div className="bg-black rounded-2xl p-4 border border-green-500 mb-4">
+                  <p className="text-gray-400 mb-2 text-sm">Chave PIX (Email)</p>
+                  <p className="text-green-400 font-mono text-lg break-all">{PIX_KEY}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyPixKey}
+                  className="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-3 rounded-2xl mb-4 transition"
+                >
+                  {copied ? '✅ Copiado!' : '📋 Copiar Chave PIX'}
+                </button>
+                <div className="bg-black rounded-2xl p-4 border border-green-500">
+                  <p className="text-white font-bold mb-3">📝 Como funciona:</p>
+                  <ol className="text-gray-300 space-y-2 text-sm">
+                    <li>1️⃣ Copie a chave PIX acima</li>
+                    <li>2️⃣ Abra seu banco ou app de PIX</li>
+                    <li>3️⃣ Transfira R$ {plans[formData.plan].price} para a chave</li>
+                    <li>4️⃣ Envie o comprovante via WhatsApp</li>
+                    <li>5️⃣ Ative seu acesso em minutos! ✨</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
             {/* Resumo */}
             <div className="bg-black rounded-2xl p-6 border border-blue-700">
               <h4 className="text-white font-bold mb-4">📊 Resumo do Pedido</h4>
@@ -274,23 +320,29 @@ export default function PagBankPayment() {
             )}
 
             {status && (
-              <div className="bg-blue-500/20 border border-blue-500 text-blue-400 p-4 rounded-2xl">
+              <div className={`p-4 rounded-2xl ${
+                status.includes('✅')
+                  ? 'bg-green-500/20 border border-green-500 text-green-400'
+                  : 'bg-blue-500/20 border border-blue-500 text-blue-400'
+              }`}>
                 {status}
               </div>
             )}
 
             {/* Botão Pagar */}
-            <button
-              type="submit"
-              disabled={loading || !formData.name || !formData.email || !formData.phone}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-4 rounded-2xl transition text-lg"
-            >
-              {loading ? '⏳ Processando...' : `💰 Pagar R$ ${plans[formData.plan].price}`}
-            </button>
+            {!showPixKey && (
+              <button
+                type="submit"
+                disabled={loading || !formData.name || !formData.email || !formData.phone}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-4 rounded-2xl transition text-lg"
+              >
+                {loading ? '⏳ Processando...' : `💰 Pagar R$ ${plans[formData.plan].price}`}
+              </button>
+            )}
 
             {/* Segurança */}
             <div className="text-center text-gray-400 text-sm space-y-1">
-              <p>🔒 Pagamento seguro e protegido pelo PagBank</p>
+              <p>🔒 Pagamento seguro e protegido</p>
               <p>✅ Acesso imediato após confirmação</p>
             </div>
           </form>
